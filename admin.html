@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ONE PAGE — Admin Panel</title>
+    <link rel="stylesheet" href="css/base.css" />
+    <link rel="stylesheet" href="css/components.css" />
+    <link rel="stylesheet" href="css/layout.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .emoji-opt {
+            font-size: 22px;
+            cursor: pointer;
+            padding: 5px 6px;
+            border-radius: 8px;
+            transition: background .15s;
+            border: 2px solid transparent;
+            line-height: 1;
+        }
+
+        .emoji-opt:hover {
+            background: var(--surface3);
+        }
+
+        .emoji-opt.active {
+            background: var(--accent-dim);
+            border-color: rgba(217, 119, 6, .3);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+
+        <div class="loading-bar" id="loadingBar"></div>
+
+        <!-- ══ HEADER ══ -->
+        <header class="app-header">
+            <div class="header-left">
+                <a href="dashboard.html" class="logo">
+                    <div class="logo-dot"></div>ONE PAGE
+                </a>
+                <span
+                    style="font-size:11px;color:var(--text-muted);background:rgba(124,58,237,0.09);border:1px solid rgba(124,58,237,0.2);padding:4px 10px;border-radius:20px;color:#7c3aed;font-weight:700">👑
+                    Admin Panel</span>
+            </div>
+            <div class="header-right">
+                <div class="user-info-chip" id="userHeaderChip"></div>
+                <a href="dashboard.html" class="btn btn-ghost" style="text-decoration:none">← Dashboard</a>
+                <button class="btn btn-ghost btn-sm" onclick="logout()" title="Sign out">↩</button>
+            </div>
+        </header>
+
+        <div class="admin-layout">
+
+            <!-- ══ NAV ══ -->
+            <nav class="admin-nav">
+                <div class="admin-nav-label">Admin</div>
+                <button class="admin-nav-item active" id="nav-overview" onclick="showAdminSection('overview')">
+                    <span>📊</span> Overview
+                </button>
+                <button class="admin-nav-item" id="nav-teams" onclick="showAdminSection('teams')">
+                    <span>🏢</span> Teams
+                </button>
+                <button class="admin-nav-item" id="nav-users" onclick="showAdminSection('users')">
+                    <span>👥</span> Users
+                </button>
+                <div class="divider" style="margin:12px 0"></div>
+                <div class="admin-nav-label">Setup</div>
+                <button class="admin-nav-item" id="nav-setup" onclick="showAdminSection('setup')">
+                    <span>📋</span> DB Setup
+                </button>
+            </nav>
+
+            <!-- ══ CONTENT ══ -->
+            <div class="admin-content">
+
+                <!-- ── OVERVIEW ── -->
+                <section class="admin-section active" id="section-overview">
+                    <div class="section-header">
+                        <div>
+                            <div class="section-title">Overview</div>
+                            <div class="section-sub">System-wide statistics and activity</div>
+                        </div>
+                    </div>
+                    <div class="stats-grid" id="adminStatsGrid">
+                        <div class="stat-card">
+                            <div class="stat-card-label">Loading…</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Quick Info</div>
+                        </div>
+                        <div class="card-body" style="font-size:12px;color:var(--text-sub);line-height:2">
+                            <div>🏢 Teams are isolated — each team sees only their own issues and discussions.</div>
+                            <div>👑 Super Admin can view ALL issues, discussions, and manage users.</div>
+                            <div>🔐 Passwords are SHA-256 hashed before storing in the database.</div>
+                            <div>💬 Discussions posted by Super Admin as "Broadcast" are visible to all teams.</div>
+                            <div>📧 Jatin is pre-configured as a Dev Team member (see DB Setup tab for SQL).</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ── TEAMS ── -->
+                <section class="admin-section" id="section-teams">
+                    <div class="section-header">
+                        <div>
+                            <div class="section-title">Teams</div>
+                            <div class="section-sub">Create and manage teams. Each team has isolated issue visibility.
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="openNewTeamModal()">+ New Team</button>
+                    </div>
+                    <div class="team-grid-admin" id="teamsGrid">
+                        <div class="empty-state" style="padding:40px 20px">
+                            <div class="empty-icon">⏳</div>
+                            <div class="empty-title">Loading…</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ── USERS ── -->
+                <section class="admin-section" id="section-users">
+                    <div class="section-header">
+                        <div>
+                            <div class="section-title">Users</div>
+                            <div class="section-sub">Manage team members, roles, and access.</div>
+                        </div>
+                        <button class="btn btn-primary" onclick="openNewUserModal()">+ New User</button>
+                    </div>
+                    <div class="card">
+                        <div class="card-body" style="padding:0">
+                            <table class="data-table" id="usersTable">
+                                <thead>
+                                    <tr>
+                                        <th>User</th>
+                                        <th>Team</th>
+                                        <th>Role</th>
+                                        <th>Status</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="usersTableBody">
+                                    <tr>
+                                        <td colspan="6" style="text-align:center;color:var(--text-muted);padding:40px">
+                                            Loading…</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ── SETUP ── -->
+                <section class="admin-section" id="section-setup">
+                    <div class="section-header">
+                        <div>
+                            <div class="section-title">Database Setup</div>
+                            <div class="section-sub">Run this SQL in your Supabase dashboard to initialise the system.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-bottom:16px">
+                        <div class="card-header">
+                            <div class="card-title">Step 1 — Run SQL in Supabase SQL Editor</div>
+                            <button class="btn btn-ghost btn-sm" onclick="copySetupSQL()">📋 Copy</button>
+                        </div>
+                        <div class="card-body">
+                            <pre id="setupSQL"
+                                style="font-family:var(--font-mono);font-size:11px;color:var(--text-sub);line-height:1.8;overflow-x:auto;white-space:pre-wrap;background:var(--surface2);padding:16px;border-radius:var(--radius);border:1px solid var(--border)"></pre>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Step 2 — Default Credentials</div>
+                        </div>
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Username</th>
+                                        <th>Password</th>
+                                        <th>Role</th>
+                                        <th>Team</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>admin</strong></td>
+                                        <td><code
+                                                style="background:var(--surface2);padding:2px 8px;border-radius:4px">Admin@123</code>
+                                        </td>
+                                        <td><span class="role-badge role-superadmin">👑 Super Admin</span></td>
+                                        <td>—</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>jatin</strong></td>
+                                        <td><code
+                                                style="background:var(--surface2);padding:2px 8px;border-radius:4px">jatin$456</code>
+                                        </td>
+                                        <td><span class="role-badge role-member">Member</span></td>
+                                        <td>💻 Dev Team</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">⚠️ Change these
+                                passwords immediately after first login via the Profile modal (avatar in header).</div>
+                        </div>
+                    </div>
+                </section>
+
+            </div><!-- /admin-content -->
+        </div><!-- /admin-layout -->
+    </div><!-- /app -->
+
+    <!-- ══════════════════════════════════════
+     NEW TEAM MODAL
+══════════════════════════════════════ -->
+    <div class="modal-overlay" id="newTeamModal">
+        <div class="modal" style="width:500px">
+            <div class="modal-header">
+                <div class="modal-title">Create New Team</div>
+                <button class="modal-close" onclick="closeModal('newTeamModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Team Name *</label>
+                        <input class="form-input" id="nt-name" placeholder="e.g. Engineering" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Team ID (auto-generated)</label>
+                        <input class="form-input" id="nt-id" placeholder="e.g. engineering" />
+                        <div class="form-hint">Lowercase, no spaces. Leave blank to auto-generate.</div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Team Icon (emoji)</label>
+                    <input class="form-input" id="nt-icon" placeholder="🚀" maxlength="4"
+                        style="font-size:20px;width:80px" />
+                    <div id="emojiPicker" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
+                        <!-- populated by initEmojiPicker() on load -->
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Team Colour</label>
+                    <div id="teamColorPicker" class="color-swatches">
+                        <div class="color-swatch active" data-idx="0" style="background:#2563eb"
+                            onclick="selectTeamColor(0,this)"></div>
+                        <div class="color-swatch" data-idx="1" style="background:#059669"
+                            onclick="selectTeamColor(1,this)"></div>
+                        <div class="color-swatch" data-idx="2" style="background:#db2777"
+                            onclick="selectTeamColor(2,this)"></div>
+                        <div class="color-swatch" data-idx="3" style="background:#d97706"
+                            onclick="selectTeamColor(3,this)"></div>
+                        <div class="color-swatch" data-idx="4" style="background:#7c3aed"
+                            onclick="selectTeamColor(4,this)"></div>
+                        <div class="color-swatch" data-idx="5" style="background:#0891b2"
+                            onclick="selectTeamColor(5,this)"></div>
+                        <div class="color-swatch" data-idx="6" style="background:#be185d"
+                            onclick="selectTeamColor(6,this)"></div>
+                        <div class="color-swatch" data-idx="7" style="background:#047857"
+                            onclick="selectTeamColor(7,this)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeModal('newTeamModal')">Cancel</button>
+                <button class="btn btn-primary" id="newTeamSubmitBtn" onclick="submitNewTeam()">Create Team</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+     NEW USER MODAL
+══════════════════════════════════════ -->
+    <div class="modal-overlay" id="newUserModal">
+        <div class="modal" style="width:500px">
+            <div class="modal-header">
+                <div class="modal-title">Create New User</div>
+                <button class="modal-close" onclick="closeModal('newUserModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Full Name *</label>
+                        <input class="form-input" id="nu-name" placeholder="e.g. Priya Sharma" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Username *</label>
+                        <input class="form-input" id="nu-username" placeholder="e.g. priya" />
+                        <div class="form-hint">Lowercase only. Used to log in.</div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password *</label>
+                    <input class="form-input" type="password" id="nu-password" placeholder="Min 6 characters" />
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Assign to Team *</label>
+                        <select class="form-select" id="nu-team"></select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Role</label>
+                        <select class="form-select" id="nu-role">
+                            <option value="member">Member</option>
+                            <option value="superadmin">Super Admin</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeModal('newUserModal')">Cancel</button>
+                <button class="btn btn-primary" id="newUserSubmitBtn" onclick="submitNewUser()">Create User</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+     EDIT USER MODAL
+══════════════════════════════════════ -->
+    <div class="modal-overlay" id="editUserModal">
+        <div class="modal" style="width:500px">
+            <div class="modal-header">
+                <div class="modal-title" id="editUserModalTitle">Edit User</div>
+                <button class="modal-close" onclick="closeModal('editUserModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Full Name *</label>
+                        <input class="form-input" id="eu-name" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Username *</label>
+                        <input class="form-input" id="eu-username" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Team</label>
+                        <select class="form-select" id="eu-team"></select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Role</label>
+                        <select class="form-select" id="eu-role">
+                            <option value="member">Member</option>
+                            <option value="superadmin">Super Admin</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">New Password <span style="color:var(--text-muted)">(leave blank to keep
+                            current)</span></label>
+                    <input class="form-input" type="password" id="eu-password"
+                        placeholder="Enter new password (min 6 chars)" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="display:flex;align-items:center;gap:10px;cursor:pointer">
+                        <input type="checkbox" id="eu-active" style="width:16px;height:16px;cursor:pointer" />
+                        Account Active
+                    </label>
+                    <div class="form-hint">Disabled accounts cannot log in.</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeModal('editUserModal')">Cancel</button>
+                <button class="btn btn-primary" id="editUserSubmitBtn" onclick="submitEditUser()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/admin.js"></script>
+    <script>
+        // ── INIT ────────────────────────────────────────────────────
+        window.addEventListener('load', async () => {
+            const session = requireAuth();
+            if (!session) return;
+            if (!requireAdmin(session)) return;
+
+            await loadTeamsMap();
+            renderUserHeader(session);
+            await loadAdminData();
+            await loadAdminStats();
+            renderSetupSQL();
+            initEmojiPicker();
+            initModalClose();
+        });
+
+        // ── Emoji picker ─────────────────────────────────────────────
+        const EMOJIS = ['🚀', '🔬', '🎨', '📊', '🛠️', '🌐', '📦', '🔐', '🎯', '💡', '🤝', '🗂️', '⚡', '🧩', '🦾', '🔭'];
+
+        function initEmojiPicker() {
+            const container = document.getElementById('emojiPicker');
+            if (!container) return;
+            container.innerHTML = EMOJIS.map(e =>
+                '<span class="emoji-opt" onclick="pickEmoji(this,\'' + e + '\')">' + e + '</span>'
+            ).join('');
+        }
+
+        function pickEmoji(el, emoji) {
+            document.getElementById('nt-icon').value = emoji;
+            document.querySelectorAll('.emoji-opt').forEach(s => s.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        // ── Team colour picker ───────────────────────────────────────
+        function selectTeamColor(idx, el) {
+            document.querySelectorAll('#teamColorPicker .color-swatch').forEach(s => s.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        // ── Setup SQL ────────────────────────────────────────────────
+        const ADMIN_HASH = 'e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7'; // Admin@123
+        const JATIN_HASH = '3a3a56b5e22c1547f00146b0c6e1f9d69419fe9ff9e0b77fd0d234f584bfd1a3'; // jatin$456
+
+        function renderSetupSQL() {
+            const sql = `-- ════════════════════════════════════════════════════════
+-- ONE PAGE Issue Tracker — Database Setup
+-- Run this in Supabase → SQL Editor → New Query
+-- ════════════════════════════════════════════════════════
+
+-- 1. TEAMS table
+CREATE TABLE IF NOT EXISTS teams (
+  id           TEXT PRIMARY KEY,
+  name         TEXT NOT NULL,
+  icon         TEXT DEFAULT '👥',
+  color        TEXT DEFAULT '#6366f1',
+  bg_color     TEXT DEFAULT 'rgba(99,102,241,0.09)',
+  border_color TEXT DEFAULT 'rgba(99,102,241,0.25)',
+  created_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. APP_USERS table
+CREATE TABLE IF NOT EXISTS app_users (
+  id            UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  username      TEXT UNIQUE NOT NULL,
+  display_name  TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  team_id       TEXT REFERENCES teams(id) ON DELETE SET NULL,
+  role          TEXT DEFAULT 'member' CHECK (role IN ('member','superadmin')),
+  is_active     BOOLEAN DEFAULT TRUE,
+  created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 3. Add columns to existing ISSUES table (safe to run even if they exist)
+ALTER TABLE issues ADD COLUMN IF NOT EXISTS team_id TEXT REFERENCES teams(id) ON DELETE SET NULL;
+ALTER TABLE issues ADD COLUMN IF NOT EXISTS assigned_to_username TEXT;
+
+-- 4. Seed: Dev Team
+INSERT INTO teams (id, name, icon, color, bg_color, border_color)
+VALUES ('dev', 'Dev Team', '💻', '#2563eb', 'rgba(37,99,235,0.09)', 'rgba(37,99,235,0.25)')
+ON CONFLICT (id) DO NOTHING;
+
+-- 5. Seed: Super Admin user  (password: Admin@123)
+INSERT INTO app_users (username, display_name, password_hash, team_id, role)
+VALUES ('admin', 'Super Admin', '${ADMIN_HASH}', NULL, 'superadmin')
+ON CONFLICT (username) DO NOTHING;
+
+-- 6. Seed: Jatin — Dev Team member  (password: Jatin@123)
+INSERT INTO app_users (username, display_name, password_hash, team_id, role)
+VALUES ('jatin', 'Jatin', '${JATIN_HASH}', 'dev', 'member')
+ON CONFLICT (username) DO NOTHING;
+
+-- 7. Assign existing issues to Dev Team (Jatin's team)
+--    Run this if you want all current issues visible to Jatin:
+UPDATE issues SET team_id = 'dev' WHERE team_id IS NULL;
+
+-- 8. Enable Row Level Security (optional but recommended)
+-- ALTER TABLE teams      ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE app_users  ENABLE ROW LEVEL SECURITY;
+-- (configure policies based on your Supabase auth setup)
+
+-- ✅ Done! Log in with:
+--   admin / Admin@123  →  Super Admin
+--   jatin / jatin$456  →  Dev Team Member`;
+
+            const el = document.getElementById('setupSQL');
+            if (el) el.textContent = sql;
+        }
+
+        function copySetupSQL() {
+            const sql = document.getElementById('setupSQL').textContent;
+            navigator.clipboard.writeText(sql).then(() => toast('SQL copied to clipboard! 📋', 'success'));
+        }
+    </script>
+</body>
+
+</html>

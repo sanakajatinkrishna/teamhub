@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ONE PAGE — Dashboard</title>
+    <link rel="stylesheet" href="css/base.css" />
+    <link rel="stylesheet" href="css/components.css" />
+    <link rel="stylesheet" href="css/layout.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+    <div class="app">
+
+        <div class="loading-bar" id="loadingBar"></div>
+
+        <!-- ══ HEADER ══ -->
+        <header class="app-header">
+            <div class="header-left">
+                <a href="dashboard.html" class="logo">
+                    <div class="logo-dot"></div>ONE PAGE
+                </a>
+                <div class="stats-bar" id="headerStats"></div>
+            </div>
+            <div class="header-right">
+                <!-- User chip -->
+                <div class="user-info-chip" id="userHeaderChip" onclick="openProfileModal()"></div>
+                <!-- Admin link (superadmin only) -->
+                <a href="admin.html" class="btn btn-ghost" id="adminBtn" style="display:none;text-decoration:none">⚙
+                    Admin</a>
+                <button class="btn btn-export" onclick="exportToExcel()">⬇ Export</button>
+                <button class="btn btn-primary" onclick="openNewIssueModal()">+ New Issue</button>
+                <button class="btn btn-ghost btn-sm" onclick="logout()" title="Sign out">↩</button>
+            </div>
+        </header>
+
+        <div class="main-layout">
+
+            <!-- ══ SIDEBAR ══ -->
+            <aside class="sidebar">
+                <div class="sidebar-label">Search</div>
+                <div class="search-box">
+                    <span class="search-icon">⌕</span>
+                    <input type="text" placeholder="Search issues…" id="searchInput" oninput="renderIssues()" />
+                </div>
+
+                <div class="divider"></div>
+                <div class="sidebar-label">Status</div>
+                <button class="filter-btn active" onclick="setFilter('all',this)">All Issues <span class="filter-count"
+                        id="cnt-all">0</span></button>
+                <button class="filter-btn" onclick="setFilter('open',this)">🔴 Open <span class="filter-count"
+                        id="cnt-open">0</span></button>
+                <button class="filter-btn" onclick="setFilter('inprogress',this)">🟡 In Progress <span
+                        class="filter-count" id="cnt-inprogress">0</span></button>
+                <button class="filter-btn" onclick="setFilter('covered',this)">🟣 Covered <span class="filter-count"
+                        id="cnt-covered">0</span></button>
+                <button class="filter-btn" onclick="setFilter('closed',this)">🟢 Closed <span class="filter-count"
+                        id="cnt-closed">0</span></button>
+
+                <div class="divider"></div>
+                <div class="sidebar-label">Priority</div>
+                <button class="filter-btn" onclick="setFilter('priority-critical',this)">⬛ Critical <span
+                        class="filter-count" id="cnt-critical">0</span></button>
+                <button class="filter-btn" onclick="setFilter('priority-high',this)">🔶 High <span class="filter-count"
+                        id="cnt-high">0</span></button>
+                <button class="filter-btn" onclick="setFilter('priority-medium',this)">🔷 Medium <span
+                        class="filter-count" id="cnt-medium">0</span></button>
+                <button class="filter-btn" onclick="setFilter('priority-low',this)">◽ Low <span class="filter-count"
+                        id="cnt-low">0</span></button>
+
+                <div class="divider"></div>
+                <div style="padding:0 8px;font-size:10px;color:var(--text-muted);line-height:1.6" id="sidebarTeamInfo">
+                </div>
+            </aside>
+
+            <!-- ══ CONTENT ══ -->
+            <main class="content">
+                <div class="content-header">
+                    <div>
+                        <div class="content-title" id="contentTitle">All Issues</div>
+                        <div class="content-sub" id="contentSub">Loading…</div>
+                    </div>
+                </div>
+
+                <div class="visibility-notice" id="visibilityNotice" style="display:none"></div>
+
+                <div class="issues-list" id="issuesList">
+                    <div class="empty-state">
+                        <div class="empty-icon">⏳</div>
+                        <div class="empty-title">Connecting…</div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+     NEW ISSUE MODAL
+══════════════════════════════════════ -->
+    <div class="modal-overlay" id="newModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Report New Issue</div>
+                <button class="modal-close" onclick="closeModal('newModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Issue Title *</label>
+                    <input class="form-input" id="f-title" placeholder="Brief description of the issue…" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-textarea" id="f-desc"
+                        placeholder="Detailed explanation, steps to reproduce…"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Raised By *</label>
+                        <input class="form-input" id="f-reporter" placeholder="Your full name" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Category</label>
+                        <select class="form-select" id="f-category">
+                            <option>Bug</option>
+                            <option>Feature Request</option>
+                            <option>Discussion</option>
+                            <option>Performance</option>
+                            <option>UI/UX</option>
+                            <option>Security</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Priority</label>
+                        <select class="form-select" id="f-priority">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Assign To (Name)</label>
+                        <input class="form-input" id="f-assignee" placeholder="Team member name" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Date Reported *</label>
+                        <input class="form-input" type="date" id="f-date" />
+                    </div>
+                    <div class="form-group" id="f-team-group">
+                        <label class="form-label">Assign to Team</label>
+                        <!-- Super admin sees dropdown; team member sees fixed label -->
+                        <select class="form-select" id="f-team"></select>
+                        <div id="f-team-display" style="font-size:12px;color:var(--text-sub);padding:10px 0"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Attach Screenshots / Images</label>
+                    <div class="upload-zone" id="uploadZone"
+                        ondragover="event.preventDefault();this.classList.add('drag-over')"
+                        ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event,'new')">
+                        <input type="file" id="f-images" accept="image/*" multiple
+                            onchange="handleFileSelect(event,'new')" />
+                        <div class="upload-zone-icon">🖼️</div>
+                        <div class="upload-zone-text">Click to upload or drag & drop</div>
+                        <div class="upload-zone-sub">PNG, JPG, GIF, WEBP — multiple files allowed</div>
+                    </div>
+                    <div class="upload-preview" id="uploadPreview"></div>
+                    <div class="upload-progress" id="uploadProgress">
+                        <div class="upload-progress-bar" id="uploadProgressBar"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeModal('newModal')">Cancel</button>
+                <button class="btn btn-primary" id="submitBtn" onclick="submitNewIssue()">Submit Issue</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+     UPDATE MODAL
+══════════════════════════════════════ -->
+    <div class="modal-overlay" id="updateModal">
+        <div class="modal" style="width:640px">
+            <div class="modal-header">
+                <div class="modal-title" id="updateModalTitle">Update Issue</div>
+                <button class="modal-close" onclick="closeModal('updateModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="u-id" />
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" id="u-status">
+                            <option value="open">Open</option>
+                            <option value="inprogress">In Progress</option>
+                            <option value="covered">Covered</option>
+                            <option value="closed">Closed</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Assigned To</label>
+                        <input class="form-input" id="u-assignee" placeholder="Team member name" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Action Taken</label>
+                    <textarea class="form-textarea" id="u-action" placeholder="Describe the action taken…"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Date of Action</label>
+                        <input class="form-input" type="date" id="u-action-date" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Closed Date</label>
+                        <input class="form-input" type="date" id="u-closed-date" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Add More Images</label>
+                    <div class="upload-zone" id="updateUploadZone"
+                        ondragover="event.preventDefault();this.classList.add('drag-over')"
+                        ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event,'update')">
+                        <input type="file" id="u-images" accept="image/*" multiple
+                            onchange="handleFileSelect(event,'update')" />
+                        <div class="upload-zone-icon">📎</div>
+                        <div class="upload-zone-text">Attach more screenshots</div>
+                        <div class="upload-zone-sub">PNG, JPG, GIF, WEBP</div>
+                    </div>
+                    <div class="upload-preview" id="updateUploadPreview"></div>
+                    <div class="upload-progress" id="updateUploadProgress">
+                        <div class="upload-progress-bar" id="updateUploadProgressBar"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Add Discussion Note</label>
+                    <div id="updateDiscTeamNotice" style="font-size:11px;color:var(--text-muted);margin-bottom:8px">
+                    </div>
+                    <div style="display:flex;gap:8px">
+                        <input class="form-input" id="u-disc-author" placeholder="Your name" style="max-width:180px" />
+                        <input class="form-input" id="u-disc-text" placeholder="Write a comment or note…" />
+                    </div>
+                    <div id="updateDiscTeamPicker" style="margin-top:8px;display:none">
+                        <label class="form-label">Post Note For Team</label>
+                        <select class="form-select" id="u-disc-team">
+                            <option value="superadmin">All Teams (Broadcast)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeModal('updateModal')">Cancel</button>
+                <button class="btn btn-primary" id="updateSubmitBtn" onclick="submitUpdate()">Save Updates</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+     PROFILE MODAL
+══════════════════════════════════════ -->
+    <div class="modal-overlay" id="profileModal">
+        <div class="modal" style="width:420px">
+            <div class="modal-header">
+                <div class="modal-title">My Profile</div>
+                <button class="modal-close" onclick="closeModal('profileModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="profileInfo"
+                    style="margin-bottom:20px;padding:16px;background:var(--surface2);border-radius:var(--radius);border:1.5px solid var(--border)">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Change Password</label>
+                    <input class="form-input" type="password" id="prof-pwd1" placeholder="New password (min 6 chars)" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Confirm Password</label>
+                    <input class="form-input" type="password" id="prof-pwd2" placeholder="Confirm new password" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" onclick="logout()">↩ Sign Out</button>
+                <div style="flex:1"></div>
+                <button class="btn btn-ghost" onclick="closeModal('profileModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="savePassword()">Update Password</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LIGHTBOX -->
+    <div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+        <button class="lightbox-close">✕</button>
+        <img id="lightboxImg" src="" alt="" />
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/issues.js"></script>
+    <script>
+        // ── INIT ────────────────────────────────────────────────────
+        window.addEventListener('load', async () => {
+            // Guard — redirect if not logged in
+            SESSION = requireAuth();
+            if (!SESSION) return;
+
+            // Load teams then render
+            await loadTeamsMap();
+
+            // Render header
+            renderUserHeader(SESSION);
+
+            // Populate team selects in modals
+            populateNewIssueTeamField();
+            populateUpdateDiscTeams();
+
+            // Sidebar team info
+            renderSidebarTeamInfo();
+
+            // Visibility notice
+            renderVisibilityNotice();
+
+            // Load issues
+            await loadIssues();
+
+            // Update content subtitle
+            const subEl = document.getElementById('contentSub');
+            if (subEl) subEl.textContent = `${SESSION.role === 'superadmin' ? 'Viewing all teams' : `${TEAMS[SESSION.teamId]?.label || SESSION.teamId} view`} · Synced with database`;
+
+            // Init modal close
+            initModalClose();
+        });
+
+        function populateNewIssueTeamField() {
+            const sel = document.getElementById('f-team');
+            const disp = document.getElementById('f-team-display');
+            if (!sel) return;
+
+            if (SESSION.role === 'superadmin') {
+                // Show all teams in dropdown
+                sel.innerHTML = Object.entries(TEAMS)
+                    .filter(([k]) => k !== 'superadmin')
+                    .map(([k, t]) => `<option value="${esc(k)}">${t.icon} ${esc(t.label)}</option>`)
+                    .join('');
+                sel.style.display = 'block';
+                if (disp) disp.style.display = 'none';
+            } else {
+                // Fixed to user's team
+                sel.style.display = 'none';
+                const t = TEAMS[SESSION.teamId];
+                if (disp) {
+                    disp.textContent = t ? `${t.icon} ${t.label}` : SESSION.teamId;
+                    disp.style.display = 'block';
+                }
+            }
+        }
+
+        function populateUpdateDiscTeams() {
+            const sel = document.getElementById('u-disc-team');
+            if (!sel) return;
+            sel.innerHTML = `<option value="superadmin">All Teams (Broadcast)</option>` +
+                Object.entries(TEAMS)
+                    .filter(([k]) => k !== 'superadmin')
+                    .map(([k, t]) => `<option value="${esc(k)}">${t.icon} ${esc(t.label)}</option>`)
+                    .join('');
+        }
+
+        function renderSidebarTeamInfo() {
+            const el = document.getElementById('sidebarTeamInfo');
+            if (!el || !SESSION) return;
+            const t = TEAMS[SESSION.teamId];
+            if (SESSION.role === 'superadmin') {
+                el.innerHTML = `<span style="color:#7c3aed;font-weight:700">👑 Super Admin</span><br/>Full access — all teams & discussions`;
+            } else if (t) {
+                el.innerHTML = `Signed in as <strong style="color:${t.color}">${t.icon} ${t.label}</strong><br/>Viewing team-specific issues & discussions.`;
+            }
+        }
+
+        function renderVisibilityNotice() {
+            const el = document.getElementById('visibilityNotice');
+            if (!el || !SESSION) return;
+            el.style.display = 'flex';
+            if (SESSION.role === 'superadmin') {
+                el.innerHTML = `👑 <span>Super Admin mode</span> — viewing all issues and all team discussions`;
+            } else {
+                const t = TEAMS[SESSION.teamId];
+                el.innerHTML = `${t?.icon || ''} Viewing issues for <span style="color:${t?.color || ''}">${t?.label || SESSION.teamId}</span> only · Discussions are private to your team`;
+            }
+        }
+
+        // ── Profile Modal ────────────────────────────────────────────
+        function openProfileModal() {
+            document.getElementById('prof-pwd1').value = '';
+            document.getElementById('prof-pwd2').value = '';
+            const t = TEAMS[SESSION.teamId];
+            const initials = SESSION.displayName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+            document.getElementById('profileInfo').innerHTML = `
+      <div style="display:flex;align-items:center;gap:14px">
+        <div class="user-avatar" style="width:48px;height:48px;font-size:18px;background:${t?.bg || 'var(--surface3)'};color:${t?.color || 'var(--text)'};border:2px solid ${t?.border || 'var(--border)'}">${initials}</div>
+        <div>
+          <div style="font-family:var(--font-head);font-size:18px;font-weight:700">${esc(SESSION.displayName)}</div>
+          <div style="font-size:11px;color:var(--text-muted)">@${esc(SESSION.username)}</div>
+          <div style="margin-top:4px">${t ? `<span class="role-badge" style="background:${t.bg};color:${t.color};border:1px solid ${t.border}">${t.icon} ${t.label}</span>` : ''} <span class="role-badge role-${SESSION.role}">${SESSION.role === 'superadmin' ? '👑 Super Admin' : 'Member'}</span></div>
+        </div>
+      </div>`;
+            openModal('profileModal');
+        }
+
+        async function savePassword() {
+            const p1 = document.getElementById('prof-pwd1').value;
+            const p2 = document.getElementById('prof-pwd2').value;
+            if (!p1) { toast('Enter a new password.', 'error'); return; }
+            if (p1.length < 6) { toast('Password must be at least 6 characters.', 'error'); return; }
+            if (p1 !== p2) { toast('Passwords do not match.', 'error'); return; }
+            try {
+                await changePassword(SESSION.userId, p1);
+                closeModal('profileModal');
+                toast('Password updated successfully! ✓', 'success');
+            } catch (e) {
+                toast('Error: ' + e.message, 'error');
+            }
+        }
+    </script>
+</body>
+
+</html>

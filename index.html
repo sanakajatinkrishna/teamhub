@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · TeamHub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div class="login-wrap">
+    <form class="card login-card" id="loginForm" autocomplete="on">
+      <div class="brand"><span class="brand-mark">◆</span><span id="appName">TeamHub</span></div>
+      <p class="muted" style="margin-bottom:22px">Sign in to your team workspace</p>
+      <div class="field">
+        <label for="username">Username</label>
+        <input class="input" id="username" name="username" autocomplete="username" autocapitalize="none" required>
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input class="input" id="password" name="password" type="password" autocomplete="current-password" required>
+      </div>
+      <div class="err" id="err"></div>
+      <button class="btn btn-primary" id="loginBtn" style="width:100%;justify-content:center;padding:10px">Sign in</button>
+      <p class="muted small" style="margin-top:16px;text-align:center">Forgot your password? Ask your admin to reset it.</p>
+    </form>
+  </div>
+
+  <script src="js/vendor/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    document.getElementById('appName').textContent = APP_NAME;
+    document.title = 'Sign in · ' + APP_NAME;
+
+    // Already signed in? Go straight to the app.
+    if (Auth.token()) Auth.me().then(u => { if (u) location.replace('app.html'); });
+
+    document.getElementById('loginForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const btn = document.getElementById('loginBtn');
+      const err = document.getElementById('err');
+      err.textContent = '';
+      btn.disabled = true; btn.textContent = 'Signing in…';
+      try {
+        await Auth.login(document.getElementById('username').value, document.getElementById('password').value);
+        location.replace('app.html');
+      } catch (ex) {
+        err.textContent = ex.message;
+        btn.disabled = false; btn.textContent = 'Sign in';
+      }
+    });
+  </script>
+</body>
+</html>

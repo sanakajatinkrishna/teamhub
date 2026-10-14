@@ -1,0 +1,2193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ONE PAGE — Team Issue Tracker</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap"
+    rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #f0f2f8;
+      --surface: #ffffff;
+      --surface2: #f5f7fc;
+      --surface3: #eaecf5;
+      --border: #dde1ef;
+      --border-light: #edf0f8;
+      --accent: #d97706;
+      --accent-dim: rgba(217, 119, 6, 0.09);
+      --accent-hover: #b45309;
+      --accent2: #2563eb;
+      --accent2-dim: rgba(37, 99, 235, 0.08);
+      --text: #1c1f2e;
+      --text-muted: #8892a4;
+      --text-sub: #4b5568;
+      --open: #dc2626;
+      --open-bg: rgba(220, 38, 38, 0.08);
+      --inprogress: #d97706;
+      --inprogress-bg: rgba(217, 119, 6, 0.09);
+      --covered: #7c3aed;
+      --covered-bg: rgba(124, 58, 237, 0.09);
+      --closed: #059669;
+      --closed-bg: rgba(5, 150, 105, 0.09);
+      --radius: 7px;
+      --font-head: 'Syne', sans-serif;
+      --font-mono: 'Space Mono', monospace;
+      --shadow-sm: 0 1px 4px rgba(30, 40, 80, 0.06), 0 1px 2px rgba(30, 40, 80, 0.04);
+      --shadow-md: 0 4px 16px rgba(30, 40, 80, 0.08), 0 2px 6px rgba(30, 40, 80, 0.04);
+      --shadow-lg: 0 12px 40px rgba(30, 40, 80, 0.12), 0 4px 12px rgba(30, 40, 80, 0.06);
+    }
+
+    /* TEAM COLOURS */
+    --team-superadmin: #7c3aed;
+    --team-dev: #2563eb;
+    --team-sales: #059669;
+    --team-marketing: #db2777;
+    --team-operations: #d97706;
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(99, 102, 241, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99, 102, 241, 0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── HEADER ── */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      position: sticky;
+      top: 0;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(14px);
+      z-index: 100;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .logo {
+      font-family: var(--font-head);
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text);
+    }
+
+    .logo-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 10px rgba(217, 119, 6, .4);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+        box-shadow: 0 0 8px rgba(217, 119, 6, .4);
+      }
+
+      50% {
+        opacity: .7;
+        box-shadow: 0 0 18px rgba(217, 119, 6, .6);
+      }
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .stats-bar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: .4px;
+    }
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .stat-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    /* TEAM BADGE in header */
+    .team-chip {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .5px;
+      border: 1.5px solid;
+      cursor: pointer;
+      transition: all .2s;
+      font-family: var(--font-mono);
+    }
+
+    .team-chip:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .team-chip-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+
+    /* ── BUTTONS ── */
+    .btn {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 8px 16px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all .2s;
+      letter-spacing: .4px;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+      font-weight: 700;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(217, 119, 6, .3);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-sub);
+      border-color: var(--border);
+    }
+
+    .btn-ghost:hover {
+      background: var(--surface2);
+      color: var(--text);
+      border-color: #c5cad8;
+    }
+
+    .btn-export {
+      background: var(--accent2-dim);
+      color: var(--accent2);
+      border-color: rgba(37, 99, 235, .2);
+    }
+
+    .btn-export:hover {
+      background: rgba(37, 99, 235, .14);
+      transform: translateY(-1px);
+    }
+
+    .btn-sm {
+      padding: 5px 10px;
+      font-size: 11px;
+    }
+
+    .btn-danger {
+      background: rgba(220, 38, 38, .07);
+      color: var(--open);
+      border-color: rgba(220, 38, 38, .18);
+    }
+
+    .btn-danger:hover {
+      background: rgba(220, 38, 38, .14);
+    }
+
+    .btn:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    /* ── LAYOUT ── */
+    .main {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: calc(100vh - 64px);
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--border);
+      padding: 24px 20px;
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      box-shadow: 2px 0 8px rgba(30, 40, 80, 0.03);
+    }
+
+    .sidebar-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      padding: 0 8px;
+    }
+
+    .filter-btn {
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-sub);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 9px 12px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all .15s;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .filter-btn:hover {
+      background: var(--surface2);
+      color: var(--text);
+      border-color: var(--border-light);
+    }
+
+    .filter-btn.active {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-color: rgba(217, 119, 6, .22);
+      font-weight: 700;
+    }
+
+    .filter-count {
+      background: var(--surface3);
+      border-radius: 10px;
+      padding: 1px 7px;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .filter-btn.active .filter-count {
+      background: rgba(217, 119, 6, .15);
+      color: var(--accent);
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border-light);
+      margin: 10px 0;
+    }
+
+    .search-box {
+      position: relative;
+      margin-bottom: 4px;
+    }
+
+    .search-box input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 9px 12px 9px 32px;
+      border-radius: var(--radius);
+      outline: none;
+      transition: border .2s;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .search-box input:focus {
+      border-color: rgba(217, 119, 6, .5);
+      background: #fff;
+    }
+
+    .search-box input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    /* ── CONTENT ── */
+    .content {
+      padding: 28px 32px;
+    }
+
+    .content-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .content-title {
+      font-family: var(--font-head);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .content-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    /* team visibility notice */
+    .visibility-notice {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 9px 14px;
+      font-size: 11px;
+      color: var(--text-sub);
+      margin-bottom: 18px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .visibility-notice span {
+      font-weight: 700;
+    }
+
+    /* ── LOADING BAR ── */
+    .loading-bar {
+      position: fixed;
+      top: 64px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: transparent;
+      z-index: 200;
+      overflow: hidden;
+    }
+
+    .loading-bar.active::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -50%;
+      width: 50%;
+      height: 100%;
+      background: var(--accent);
+      animation: loadSlide 1s ease infinite;
+    }
+
+    @keyframes loadSlide {
+      0% {
+        left: -50%;
+      }
+
+      100% {
+        left: 150%;
+      }
+    }
+
+    /* ── ISSUE CARDS ── */
+    .issues-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .issue-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      transition: border-color .2s, transform .15s, box-shadow .2s;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .issue-card:hover {
+      border-color: rgba(217, 119, 6, .3);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .issue-card-header {
+      padding: 16px 20px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      cursor: pointer;
+    }
+
+    .issue-card-left {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .issue-id {
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+      margin-bottom: 5px;
+    }
+
+    .issue-title {
+      font-family: var(--font-head);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .issue-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .issue-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .raised-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(217, 119, 6, .08);
+      border: 1px solid rgba(217, 119, 6, .2);
+      border-radius: 20px;
+      padding: 2px 10px;
+      font-size: 10px;
+      color: var(--accent);
+      font-weight: 700;
+      letter-spacing: .4px;
+    }
+
+    .badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 20px;
+      letter-spacing: .6px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      font-family: var(--font-mono);
+    }
+
+    .badge-open {
+      background: var(--open-bg);
+      color: var(--open);
+      border: 1px solid rgba(220, 38, 38, .18);
+    }
+
+    .badge-inprogress {
+      background: var(--inprogress-bg);
+      color: var(--inprogress);
+      border: 1px solid rgba(217, 119, 6, .18);
+    }
+
+    .badge-covered {
+      background: var(--covered-bg);
+      color: var(--covered);
+      border: 1px solid rgba(124, 58, 237, .18);
+    }
+
+    .badge-closed {
+      background: var(--closed-bg);
+      color: var(--closed);
+      border: 1px solid rgba(5, 150, 105, .18);
+    }
+
+    .priority-badge {
+      font-size: 9px;
+      padding: 2px 7px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      letter-spacing: .7px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+
+    .priority-critical {
+      background: rgba(220, 38, 38, .1);
+      color: #b91c1c;
+    }
+
+    .priority-high {
+      background: rgba(234, 88, 12, .1);
+      color: #c2410c;
+    }
+
+    .priority-medium {
+      background: rgba(202, 138, 4, .12);
+      color: #a16207;
+    }
+
+    .priority-low {
+      background: rgba(22, 163, 74, .1);
+      color: #15803d;
+    }
+
+    .issue-card-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .issue-card-body {
+      padding: 0 20px 18px;
+      display: none;
+      border-top: 1.5px solid var(--border-light);
+      background: var(--surface2);
+    }
+
+    .issue-card-body.open {
+      display: block;
+    }
+
+    .issue-description {
+      font-size: 12px;
+      color: var(--text-sub);
+      line-height: 1.7;
+      padding-top: 14px;
+      margin-bottom: 16px;
+    }
+
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .detail-box {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .detail-box-label {
+      font-size: 9px;
+      color: var(--text-muted);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .detail-box-value {
+      font-size: 12px;
+      color: var(--text);
+    }
+
+    .section-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .images-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .image-thumb {
+      width: 110px;
+      height: 85px;
+      border-radius: var(--radius);
+      border: 1.5px solid var(--border);
+      object-fit: cover;
+      cursor: pointer;
+      transition: transform .2s, border-color .2s, box-shadow .2s;
+    }
+
+    .image-thumb:hover {
+      transform: scale(1.06);
+      border-color: var(--accent);
+      box-shadow: var(--shadow-md);
+    }
+
+    .action-text {
+      font-size: 12px;
+      color: var(--text-sub);
+      line-height: 1.7;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      min-height: 40px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* ── DISCUSSION ENTRIES ── */
+    .discussion-entry {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 11px 14px;
+      margin-bottom: 8px;
+      box-shadow: var(--shadow-sm);
+      border-left: 3px solid var(--border);
+    }
+
+    .discussion-meta {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      font-size: 10px;
+      color: var(--text-muted);
+      align-items: center;
+    }
+
+    .discussion-meta-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .discussion-author {
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .discussion-team-tag {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      letter-spacing: .6px;
+      text-transform: uppercase;
+    }
+
+    .discussion-text {
+      font-size: 12px;
+      color: var(--text-sub);
+      line-height: 1.6;
+    }
+
+    .discussion-locked {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 8px 12px;
+      background: var(--surface3);
+      border-radius: var(--radius);
+      border: 1px dashed var(--border);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .discussion-add {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .discussion-input {
+      flex: 1;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 8px 12px;
+      border-radius: var(--radius);
+      outline: none;
+      transition: border .2s;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .discussion-input:focus {
+      border-color: rgba(217, 119, 6, .5);
+      background: #fff;
+    }
+
+    .discussion-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    /* ── MODALS ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(30, 40, 80, .45);
+      backdrop-filter: blur(6px);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      width: 600px;
+      max-width: 95vw;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: translateY(20px);
+      transition: transform .25s;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .modal-overlay.open .modal {
+      transform: translateY(0);
+    }
+
+    .modal-header {
+      padding: 22px 24px 18px;
+      border-bottom: 1.5px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      z-index: 10;
+      border-radius: 14px 14px 0 0;
+    }
+
+    .modal-title {
+      font-family: var(--font-head);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .modal-close {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 16px;
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      transition: all .15s;
+    }
+
+    .modal-close:hover {
+      background: var(--surface3);
+      color: var(--text);
+    }
+
+    .modal-body {
+      padding: 22px 24px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 7px;
+      font-weight: 700;
+    }
+
+    .form-input,
+    .form-textarea,
+    .form-select {
+      width: 100%;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      outline: none;
+      transition: border .2s, background .2s;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .form-input:focus,
+    .form-textarea:focus,
+    .form-select:focus {
+      border-color: rgba(217, 119, 6, .5);
+      background: #fff;
+    }
+
+    .form-input::placeholder,
+    .form-textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    .form-textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .form-select {
+      appearance: none;
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238892a4' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+
+    .form-select option {
+      background: #fff;
+      color: var(--text);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    /* UPLOAD ZONE */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      position: relative;
+      background: var(--surface2);
+    }
+
+    .upload-zone:hover,
+    .upload-zone.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .upload-zone input[type=file] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .upload-zone-icon {
+      font-size: 26px;
+      margin-bottom: 6px;
+    }
+
+    .upload-zone-text {
+      font-size: 12px;
+      color: var(--text-sub);
+    }
+
+    .upload-zone-sub {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .upload-preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .upload-preview-item {
+      position: relative;
+      width: 72px;
+      height: 60px;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1.5px solid var(--border);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .upload-preview-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .upload-preview-remove {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      background: rgba(0, 0, 0, .55);
+      border: none;
+      color: #fff;
+      font-size: 10px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .upload-progress {
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      margin-top: 8px;
+      overflow: hidden;
+      display: none;
+    }
+
+    .upload-progress.active {
+      display: block;
+    }
+
+    .upload-progress-bar {
+      height: 100%;
+      background: var(--accent);
+      transition: width .3s ease;
+      width: 0%;
+    }
+
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1.5px solid var(--border-light);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      background: var(--surface2);
+      border-radius: 0 0 14px 14px;
+    }
+
+    /* ── TEAM SELECTOR MODAL ── */
+    .team-selector-modal {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 16px;
+      width: 480px;
+      max-width: 95vw;
+      transform: translateY(20px);
+      transition: transform .25s;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+    }
+
+    .modal-overlay.open .team-selector-modal {
+      transform: translateY(0);
+    }
+
+    .team-selector-header {
+      padding: 28px 28px 20px;
+      background: linear-gradient(135deg, #f8f9ff 0%, #fff 100%);
+      border-bottom: 1.5px solid var(--border);
+      text-align: center;
+    }
+
+    .team-selector-logo {
+      font-family: var(--font-head);
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .team-selector-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .team-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 24px 28px;
+    }
+
+    .team-option {
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 16px;
+      cursor: pointer;
+      transition: all .2s;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .team-option:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .team-option.selected {
+      border-width: 2px;
+    }
+
+    .team-option-icon {
+      font-size: 28px;
+    }
+
+    .team-option-name {
+      font-family: var(--font-head);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .team-option-desc {
+      font-size: 10px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* Super admin spans full width */
+    .team-option.super-admin {
+      grid-column: 1 / -1;
+    }
+
+    .team-selector-footer {
+      padding: 0 28px 24px;
+      text-align: center;
+    }
+
+    /* ── LIGHTBOX ── */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(20, 25, 50, .92);
+      z-index: 300;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .lightbox.open {
+      display: flex;
+    }
+
+    .lightbox img {
+      max-width: 90vw;
+      max-height: 90vh;
+      border-radius: 10px;
+      box-shadow: 0 20px 80px rgba(0, 0, 0, .5);
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: 20px;
+      right: 24px;
+      font-size: 30px;
+      color: #fff;
+      cursor: pointer;
+      background: none;
+      border: none;
+      line-height: 1;
+      opacity: .8;
+      transition: opacity .15s;
+    }
+
+    .lightbox-close:hover {
+      opacity: 1;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 80px 40px;
+      color: var(--text-muted);
+    }
+
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .empty-title {
+      font-family: var(--font-head);
+      font-size: 18px;
+      color: var(--text-sub);
+      margin-bottom: 8px;
+    }
+
+    .empty-sub {
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    /* ── TOAST ── */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toast {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 12px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: slideIn .3s ease, fadeOut .3s ease 2.7s forwards;
+      min-width: 240px;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .toast.success {
+      border-left: 3px solid var(--closed);
+    }
+
+    .toast.error {
+      border-left: 3px solid var(--open);
+    }
+
+    .toast.info {
+      border-left: 3px solid var(--accent2);
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes fadeOut {
+      to {
+        opacity: 0;
+        transform: translateX(100%);
+      }
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--surface2);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #c5cad8;
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #9ca3af;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+
+    <div class="loading-bar" id="loadingBar"></div>
+
+    <header>
+      <div class="logo">
+        <div class="logo-dot"></div>ONE PAGE
+      </div>
+      <div class="header-right">
+        <div class="stats-bar" id="headerStats"></div>
+        <div id="teamChipHeader" class="team-chip" onclick="openTeamSelector()" title="Switch team"></div>
+        <button class="btn btn-export" onclick="exportToExcel()">⬇ Export</button>
+        <button class="btn btn-primary" onclick="openNewIssueModal()">+ New Issue</button>
+      </div>
+    </header>
+
+    <div class="main">
+      <aside class="sidebar">
+        <div class="sidebar-label">Search</div>
+        <div class="search-box">
+          <span class="search-icon">⌕</span>
+          <input type="text" placeholder="Search issues…" id="searchInput" oninput="renderIssues()" />
+        </div>
+
+        <div class="divider"></div>
+        <div class="sidebar-label">Filter by Status</div>
+        <button class="filter-btn active" onclick="setFilter('all',this)">All Issues <span class="filter-count"
+            id="cnt-all">0</span></button>
+        <button class="filter-btn" onclick="setFilter('open',this)">🔴 Open <span class="filter-count"
+            id="cnt-open">0</span></button>
+        <button class="filter-btn" onclick="setFilter('inprogress',this)">🟡 In Progress <span class="filter-count"
+            id="cnt-inprogress">0</span></button>
+        <button class="filter-btn" onclick="setFilter('covered',this)">🟣 Covered <span class="filter-count"
+            id="cnt-covered">0</span></button>
+        <button class="filter-btn" onclick="setFilter('closed',this)">🟢 Closed <span class="filter-count"
+            id="cnt-closed">0</span></button>
+
+        <div class="divider"></div>
+        <div class="sidebar-label">Filter by Priority</div>
+        <button class="filter-btn" onclick="setFilter('priority-critical',this)">⬛ Critical <span class="filter-count"
+            id="cnt-critical">0</span></button>
+        <button class="filter-btn" onclick="setFilter('priority-high',this)">🔶 High <span class="filter-count"
+            id="cnt-high">0</span></button>
+        <button class="filter-btn" onclick="setFilter('priority-medium',this)">🔷 Medium <span class="filter-count"
+            id="cnt-medium">0</span></button>
+        <button class="filter-btn" onclick="setFilter('priority-low',this)">◽ Low <span class="filter-count"
+            id="cnt-low">0</span></button>
+      </aside>
+
+      <main class="content">
+        <div class="content-header">
+          <div>
+            <div class="content-title" id="contentTitle">All Issues</div>
+            <div class="content-sub" id="contentSub">Synced with Supabase</div>
+          </div>
+        </div>
+
+        <div class="visibility-notice" id="visibilityNotice" style="display:none"></div>
+
+        <div class="issues-list" id="issuesList">
+          <div class="empty-state">
+            <div class="empty-icon">⏳</div>
+            <div class="empty-title">Connecting…</div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+     TEAM SELECTOR MODAL
+══════════════════════════════════════ -->
+  <div class="modal-overlay" id="teamModal" style="z-index:500">
+    <div class="team-selector-modal">
+      <div class="team-selector-header">
+        <div class="team-selector-logo">
+          <div class="logo-dot"></div>ONE PAGE
+        </div>
+        <div class="team-selector-sub">Select your team to continue</div>
+      </div>
+      <div class="team-grid">
+        <div class="team-option super-admin" onclick="selectTeam('superadmin')" id="team-opt-superadmin"
+          style="border-color:#7c3aed20">
+          <div class="team-option-icon">👑</div>
+          <div class="team-option-name" style="color:#7c3aed">Super Admin</div>
+          <div class="team-option-desc">Full access — view all discussions across all teams</div>
+        </div>
+        <div class="team-option" onclick="selectTeam('dev')" id="team-opt-dev" style="border-color:#2563eb20">
+          <div class="team-option-icon">💻</div>
+          <div class="team-option-name" style="color:#2563eb">Dev Team</div>
+          <div class="team-option-desc">Engineering & technical issues</div>
+        </div>
+        <div class="team-option" onclick="selectTeam('sales')" id="team-opt-sales" style="border-color:#05966920">
+          <div class="team-option-icon">📈</div>
+          <div class="team-option-name" style="color:#059669">Sales Team</div>
+          <div class="team-option-desc">Sales pipeline & client issues</div>
+        </div>
+        <div class="team-option" onclick="selectTeam('marketing')" id="team-opt-marketing"
+          style="border-color:#db277720">
+          <div class="team-option-icon">📣</div>
+          <div class="team-option-name" style="color:#db2777">Marketing Team</div>
+          <div class="team-option-desc">Campaigns, content & branding</div>
+        </div>
+        <div class="team-option" onclick="selectTeam('operations')" id="team-opt-operations"
+          style="border-color:#d9770620">
+          <div class="team-option-icon">⚙️</div>
+          <div class="team-option-name" style="color:#d97706">Operations</div>
+          <div class="team-option-desc">Processes, logistics & support</div>
+        </div>
+      </div>
+      <div class="team-selector-footer">
+        <div style="font-size:10px;color:var(--text-muted)">💬 Discussions are private per team · Super Admin sees all
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+     NEW ISSUE MODAL
+══════════════════════════════════════ -->
+  <div class="modal-overlay" id="newModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">Report New Issue</div>
+        <button class="modal-close" onclick="closeModal('newModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Issue Title *</label>
+          <input class="form-input" id="f-title" placeholder="Brief description of the issue…" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea class="form-textarea" id="f-desc"
+            placeholder="Detailed explanation, steps to reproduce, expected vs actual behaviour…"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Raised By * <span style="color:var(--accent)">★</span></label>
+            <input class="form-input" id="f-reporter" placeholder="Your full name" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <select class="form-select" id="f-category">
+              <option>Bug</option>
+              <option>Feature Request</option>
+              <option>Discussion</option>
+              <option>Performance</option>
+              <option>UI/UX</option>
+              <option>Security</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Priority</label>
+            <select class="form-select" id="f-priority">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Assign To</label>
+            <input class="form-input" id="f-assignee" placeholder="Team member name" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date Reported *</label>
+          <input class="form-input" type="date" id="f-date" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Attach Screenshots / Images</label>
+          <div class="upload-zone" id="uploadZone" ondragover="event.preventDefault();this.classList.add('drag-over')"
+            ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event,'new')">
+            <input type="file" id="f-images" accept="image/*" multiple onchange="handleFileSelect(event,'new')" />
+            <div class="upload-zone-icon">🖼️</div>
+            <div class="upload-zone-text">Click to upload or drag & drop images</div>
+            <div class="upload-zone-sub">PNG, JPG, GIF, WEBP — multiple files allowed</div>
+          </div>
+          <div class="upload-preview" id="uploadPreview"></div>
+          <div class="upload-progress" id="uploadProgress">
+            <div class="upload-progress-bar" id="uploadProgressBar"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('newModal')">Cancel</button>
+        <button class="btn btn-primary" id="submitBtn" onclick="submitNewIssue()">Submit Issue</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+     UPDATE MODAL
+══════════════════════════════════════ -->
+  <div class="modal-overlay" id="updateModal">
+    <div class="modal" style="width:640px">
+      <div class="modal-header">
+        <div class="modal-title" id="updateModalTitle">Update Issue</div>
+        <button class="modal-close" onclick="closeModal('updateModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="u-id" />
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="u-status">
+            <option value="open">Open</option>
+            <option value="inprogress">In Progress</option>
+            <option value="covered">Covered</option>
+            <option value="closed">Closed</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Action Taken</label>
+          <textarea class="form-textarea" id="u-action"
+            placeholder="Describe the action taken to address this issue…"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Assigned To</label>
+            <input class="form-input" id="u-assignee" placeholder="Team member name" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date of Action</label>
+            <input class="form-input" type="date" id="u-action-date" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Closed Date</label>
+          <input class="form-input" type="date" id="u-closed-date" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Add More Images</label>
+          <div class="upload-zone" id="updateUploadZone"
+            ondragover="event.preventDefault();this.classList.add('drag-over')"
+            ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event,'update')">
+            <input type="file" id="u-images" accept="image/*" multiple onchange="handleFileSelect(event,'update')" />
+            <div class="upload-zone-icon">📎</div>
+            <div class="upload-zone-text">Attach more screenshots</div>
+            <div class="upload-zone-sub">PNG, JPG, GIF, WEBP</div>
+          </div>
+          <div class="upload-preview" id="updateUploadPreview"></div>
+          <div class="upload-progress" id="updateUploadProgress">
+            <div class="upload-progress-bar" id="updateUploadProgressBar"></div>
+          </div>
+        </div>
+
+        <!-- Team-aware discussion in update modal -->
+        <div class="form-group">
+          <label class="form-label">Add Discussion Note</label>
+          <div id="updateDiscTeamNotice" style="font-size:11px;color:var(--text-muted);margin-bottom:8px"></div>
+          <div style="display:flex;gap:8px">
+            <input class="form-input" id="u-disc-author" placeholder="Your name" style="max-width:180px" />
+            <input class="form-input" id="u-disc-text" placeholder="Write a comment or note…" />
+          </div>
+          <!-- Super Admin: team picker for posting -->
+          <div id="updateDiscTeamPicker" style="margin-top:8px;display:none">
+            <label class="form-label">Post Note For Team</label>
+            <select class="form-select" id="u-disc-team">
+              <option value="superadmin">All Teams (Super Admin)</option>
+              <option value="dev">Dev Team</option>
+              <option value="sales">Sales Team</option>
+              <option value="marketing">Marketing Team</option>
+              <option value="operations">Operations</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('updateModal')">Cancel</button>
+        <button class="btn btn-primary" id="updateSubmitBtn" onclick="submitUpdate()">Save Updates</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIGHTBOX -->
+  <div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+    <button class="lightbox-close">✕</button>
+    <img id="lightboxImg" src="" alt="" />
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    const { createClient } = supabase;
+    const SB_URL = 'https://qsnnoncjqvqpjkfbobcb.supabase.co';
+    const SB_KEY = 'sb_publishable_TGm4xC2knWAUTGqSSiib-Q_6fIzNx50';
+    const BUCKET = 'images';
+    const sb = createClient(SB_URL, SB_KEY);
+
+    let issues = [];
+    let currentFilter = 'all';
+    let expandedCards = new Set();
+    let pendingFiles = { new: [], update: [] };
+
+    // ── TEAM CONFIG ──
+    const TEAMS = {
+      superadmin: { label: 'Super Admin', icon: '👑', color: '#7c3aed', bg: 'rgba(124,58,237,0.09)', border: 'rgba(124,58,237,0.25)' },
+      dev: { label: 'Dev Team', icon: '💻', color: '#2563eb', bg: 'rgba(37,99,235,0.09)', border: 'rgba(37,99,235,0.25)' },
+      sales: { label: 'Sales Team', icon: '📈', color: '#059669', bg: 'rgba(5,150,105,0.09)', border: 'rgba(5,150,105,0.25)' },
+      marketing: { label: 'Marketing', icon: '📣', color: '#db2777', bg: 'rgba(219,39,119,0.09)', border: 'rgba(219,39,119,0.25)' },
+      operations: { label: 'Operations', icon: '⚙️', color: '#d97706', bg: 'rgba(217,119,6,0.09)', border: 'rgba(217,119,6,0.25)' },
+    };
+
+    let currentTeam = null; // set after team selection
+
+    function today() { return new Date().toISOString().split('T')[0]; }
+
+    function esc(s) {
+      if (!s) return '';
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function loading(on) { document.getElementById('loadingBar').classList.toggle('active', on); }
+
+    function toast(msg, type = 'success') {
+      const c = document.getElementById('toastContainer');
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'info' ? 'ℹ' : '⚠'}</span> ${msg}`;
+      c.appendChild(el);
+      setTimeout(() => el.remove(), 3300);
+    }
+
+    async function generateId() {
+      const { count } = await sb.from('issues').select('*', { count: 'exact', head: true });
+      return 'OP-' + String((count || 0) + 1).padStart(4, '0');
+    }
+
+    // ── TEAM SELECTION ──
+    function openTeamSelector() {
+      document.getElementById('teamModal').classList.add('open');
+      // Highlight current selection
+      if (currentTeam) {
+        document.querySelectorAll('.team-option').forEach(el => el.style.borderWidth = '2px');
+        const opt = document.getElementById('team-opt-' + currentTeam);
+        if (opt) {
+          const t = TEAMS[currentTeam];
+          opt.style.borderColor = t.border;
+          opt.style.background = t.bg;
+        }
+      }
+    }
+
+    function selectTeam(teamKey) {
+      currentTeam = teamKey;
+      closeModal('teamModal');
+      updateTeamChip();
+      updateVisibilityNotice();
+      renderIssues();
+      toast(`Signed in as ${TEAMS[teamKey].icon} ${TEAMS[teamKey].label}`, 'info');
+    }
+
+    function updateTeamChip() {
+      if (!currentTeam) return;
+      const t = TEAMS[currentTeam];
+      const chip = document.getElementById('teamChipHeader');
+      chip.innerHTML = `<span class="team-chip-dot" style="background:${t.color}"></span>${t.icon} ${t.label} <span style="opacity:.5;font-size:10px">▼</span>`;
+      chip.style.color = t.color;
+      chip.style.background = t.bg;
+      chip.style.borderColor = t.border;
+    }
+
+    function updateVisibilityNotice() {
+      const el = document.getElementById('visibilityNotice');
+      if (!currentTeam) { el.style.display = 'none'; return; }
+      el.style.display = 'flex';
+      if (currentTeam === 'superadmin') {
+        el.innerHTML = `👑 <span>Super Admin mode</span> — viewing all discussions from every team`;
+      } else {
+        const t = TEAMS[currentTeam];
+        el.innerHTML = `${t.icon} Showing discussions for <span style="color:${t.color}">${t.label}</span> only · <span style="color:var(--text-muted)">Super Admin can view all</span>`;
+      }
+    }
+
+    // Whether the current viewer can see a discussion
+    function canSeeDiscussion(disc) {
+      if (!currentTeam) return false;
+      if (currentTeam === 'superadmin') return true;
+      // Super Admin broadcast (team = 'superadmin') is visible to all
+      return disc.team === currentTeam || disc.team === 'superadmin';
+    }
+
+    // ── LOAD ──
+    async function loadIssues() {
+      loading(true);
+      const { data, error } = await sb.from('issues').select('*').order('created_at', { ascending: false });
+      loading(false);
+      if (error) { toast('Connection error: ' + error.message, 'error'); return; }
+      issues = data || [];
+      renderIssues();
+    }
+
+    // ── UPLOAD IMAGES ──
+    async function uploadImages(files, issueId, mode) {
+      const urls = [];
+      const progEl = document.getElementById(mode === 'new' ? 'uploadProgress' : 'updateUploadProgress');
+      const barEl = document.getElementById(mode === 'new' ? 'uploadProgressBar' : 'updateUploadProgressBar');
+      if (progEl) progEl.classList.add('active');
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const ext = file.name.split('.').pop().toLowerCase() || 'jpg';
+        const path = `${issueId}/${Date.now()}_${i}.${ext}`;
+        const { error } = await sb.storage.from(BUCKET).upload(path, file, { upsert: true });
+        if (error) { toast(`Image ${i + 1} failed: ${error.message}`, 'error'); continue; }
+        const { data: urlData } = sb.storage.from(BUCKET).getPublicUrl(path);
+        urls.push(urlData.publicUrl);
+        if (barEl) barEl.style.width = `${Math.round(((i + 1) / files.length) * 100)}%`;
+      }
+
+      setTimeout(() => {
+        if (progEl) progEl.classList.remove('active');
+        if (barEl) barEl.style.width = '0%';
+      }, 700);
+      return urls;
+    }
+
+    // ── FILE HANDLING ──
+    function handleFileSelect(event, mode) {
+      const files = Array.from(event.target.files);
+      pendingFiles[mode] = [...pendingFiles[mode], ...files];
+      refreshPreview(mode);
+    }
+
+    function handleDrop(event, mode) {
+      event.preventDefault();
+      const zone = document.getElementById(mode === 'new' ? 'uploadZone' : 'updateUploadZone');
+      zone.classList.remove('drag-over');
+      const files = Array.from(event.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+      pendingFiles[mode] = [...pendingFiles[mode], ...files];
+      refreshPreview(mode);
+    }
+
+    function refreshPreview(mode) {
+      const files = pendingFiles[mode];
+      const containerId = mode === 'new' ? 'uploadPreview' : 'updateUploadPreview';
+      document.getElementById(containerId).innerHTML = files.map((f, i) => `
+    <div class="upload-preview-item">
+      <img src="${URL.createObjectURL(f)}" alt="${esc(f.name)}"/>
+      <button class="upload-preview-remove" onclick="removeFile(${i},'${mode}')">✕</button>
+    </div>`).join('');
+    }
+
+    function removeFile(index, mode) {
+      pendingFiles[mode].splice(index, 1);
+      refreshPreview(mode);
+    }
+
+    // ── FILTER ──
+    function setFilter(f, el) {
+      currentFilter = f;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+      const titles = {
+        all: 'All Issues', open: 'Open Issues', inprogress: 'In Progress',
+        covered: 'Covered Issues', closed: 'Closed Issues',
+        'priority-critical': 'Critical Priority', 'priority-high': 'High Priority',
+        'priority-medium': 'Medium Priority', 'priority-low': 'Low Priority'
+      };
+      document.getElementById('contentTitle').textContent = titles[f] || 'Issues';
+      renderIssues();
+    }
+
+    function getFiltered() {
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      return issues.filter(issue => {
+        const matchFilter =
+          currentFilter === 'all' ? true :
+            currentFilter.startsWith('priority-') ? issue.priority === currentFilter.replace('priority-', '') :
+              issue.status === currentFilter;
+        const matchSearch = !q ||
+          (issue.title || '').toLowerCase().includes(q) ||
+          (issue.description || '').toLowerCase().includes(q) ||
+          (issue.reporter || '').toLowerCase().includes(q) ||
+          (issue.id || '').toLowerCase().includes(q) ||
+          (issue.assignee || '').toLowerCase().includes(q);
+        return matchFilter && matchSearch;
+      });
+    }
+
+    function updateCounts() {
+      const c = { all: issues.length, open: 0, inprogress: 0, covered: 0, closed: 0, critical: 0, high: 0, medium: 0, low: 0 };
+      issues.forEach(i => {
+        if (c[i.status] !== undefined) c[i.status]++;
+        if (c[i.priority] !== undefined) c[i.priority]++;
+      });
+      Object.keys(c).forEach(k => {
+        const el = document.getElementById('cnt-' + k);
+        if (el) el.textContent = c[k];
+      });
+      document.getElementById('headerStats').innerHTML = `
+    <div class="stat-item"><div class="stat-dot" style="background:#dc2626"></div>${c.open} Open</div>
+    <div class="stat-item"><div class="stat-dot" style="background:#d97706"></div>${c.inprogress} Progress</div>
+    <div class="stat-item"><div class="stat-dot" style="background:#059669"></div>${c.closed} Closed</div>
+  `;
+    }
+
+    // ── RENDER ──
+    function renderIssues() {
+      updateCounts();
+      const list = document.getElementById('issuesList');
+      const filtered = getFiltered();
+
+      if (!filtered.length) {
+        list.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📋</div>
+      <div class="empty-title">${issues.length === 0 ? 'No issues yet' : 'No matching issues'}</div>
+      <div class="empty-sub">${issues.length === 0 ? 'Click "+ New Issue" to report the first issue.' : 'Try adjusting your search or filter.'}</div>
+    </div>`;
+        return;
+      }
+      list.innerHTML = filtered.map(renderCard).join('');
+    }
+
+    function renderDiscussionTag(teamKey) {
+      if (!teamKey || !TEAMS[teamKey]) return '';
+      const t = TEAMS[teamKey];
+      return `<span class="discussion-team-tag" style="background:${t.bg};color:${t.color};border:1px solid ${t.border}">${t.icon} ${t.label}</span>`;
+    }
+
+    function renderCard(issue) {
+      const exp = expandedCards.has(issue.id);
+      const statusLabel = { open: 'Open', inprogress: 'In Progress', covered: 'Covered', closed: 'Closed' }[issue.status] || issue.status;
+      const imgs = issue.images || [];
+      const allDiscs = issue.discussions || [];
+      // Filter discussions by team visibility
+      const visibleDiscs = currentTeam ? allDiscs.filter(d => canSeeDiscussion(d)) : [];
+      const visibleCount = visibleDiscs.length;
+      const totalCount = allDiscs.length;
+
+      const imgsHTML = imgs.length ? `
+    <div style="margin-bottom:16px">
+      <div class="section-label">Attachments (${imgs.length})</div>
+      <div class="images-grid">${imgs.map(url =>
+        `<img class="image-thumb" src="${esc(url)}" alt="attachment" loading="lazy" onclick="openLightbox('${esc(url)}')">`
+      ).join('')}</div>
+    </div>` : '';
+
+      const discsHTML = visibleDiscs.map(d => {
+        const teamInfo = TEAMS[d.team];
+        const leftBorderColor = teamInfo ? teamInfo.color : 'var(--border)';
+        return `
+    <div class="discussion-entry" style="border-left-color:${leftBorderColor}">
+      <div class="discussion-meta">
+        <div class="discussion-meta-left">
+          <span class="discussion-author">👤 ${esc(d.author)}</span>
+          ${renderDiscussionTag(d.team)}
+        </div>
+        <span>${esc(d.date)}</span>
+      </div>
+      <div class="discussion-text">${esc(d.text)}</div>
+    </div>`;
+      }).join('');
+
+      const hiddenCount = totalCount - visibleCount;
+      const hiddenNote = hiddenCount > 0 ? `
+    <div class="discussion-locked">🔒 ${hiddenCount} note${hiddenCount > 1 ? 's' : ''} from other teams — not visible to ${TEAMS[currentTeam]?.label || 'your team'}</div>` : '';
+
+      return `
+  <div class="issue-card" id="card-${issue.id}">
+    <div class="issue-card-header" onclick="toggleCard('${issue.id}')">
+      <div class="issue-card-left">
+        <div class="issue-id">${esc(issue.id)} &nbsp;·&nbsp; ${esc(issue.category)}</div>
+        <div class="issue-title">${esc(issue.title)}</div>
+        <div class="issue-meta">
+          <span class="badge badge-${issue.status}">${statusLabel}</span>
+          <span class="priority-badge priority-${issue.priority}">${issue.priority}</span>
+          <span class="raised-chip">✋ ${esc(issue.reporter)}</span>
+          <span class="issue-meta-item">📅 ${esc(issue.date_reported) || '—'}</span>
+          ${issue.assignee ? `<span class="issue-meta-item">🔧 ${esc(issue.assignee)}</span>` : ''}
+          ${imgs.length ? `<span class="issue-meta-item">🖼️ ${imgs.length} img</span>` : ''}
+          ${visibleCount ? `<span class="issue-meta-item">💬 ${visibleCount}${totalCount > visibleCount ? '/' + totalCount : ''}</span>` : ''}
+        </div>
+      </div>
+      <div class="issue-card-actions" onclick="event.stopPropagation()">
+        <button class="btn btn-sm btn-ghost" onclick="openUpdateModal('${issue.id}')">✏ Update</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteIssue('${issue.id}')">✕</button>
+      </div>
+    </div>
+    <div class="issue-card-body ${exp ? 'open' : ''}">
+      ${issue.description ? `<div class="issue-description">${esc(issue.description)}</div>` : ''}
+
+      <div class="details-grid">
+        <div class="detail-box">
+          <div class="detail-box-label">Raised By</div>
+          <div class="detail-box-value" style="color:var(--accent);font-weight:700">${esc(issue.reporter) || '—'}</div>
+        </div>
+        <div class="detail-box">
+          <div class="detail-box-label">Date Reported</div>
+          <div class="detail-box-value">${esc(issue.date_reported) || '—'}</div>
+        </div>
+        <div class="detail-box">
+          <div class="detail-box-label">Assigned To</div>
+          <div class="detail-box-value">${esc(issue.assignee) || '—'}</div>
+        </div>
+        <div class="detail-box">
+          <div class="detail-box-label">Date of Action</div>
+          <div class="detail-box-value">${esc(issue.date_action) || '—'}</div>
+        </div>
+        <div class="detail-box">
+          <div class="detail-box-label">Closed Date</div>
+          <div class="detail-box-value">${esc(issue.date_closed) || '—'}</div>
+        </div>
+        <div class="detail-box">
+          <div class="detail-box-label">Current Status</div>
+          <div class="detail-box-value"><span class="badge badge-${issue.status}">${statusLabel}</span></div>
+        </div>
+      </div>
+
+      ${imgsHTML}
+
+      ${issue.action_taken ? `
+        <div class="section-label">Action Taken</div>
+        <div class="action-text">${esc(issue.action_taken)}</div>
+      ` : ''}
+
+      <div>
+        <div class="section-label">Discussions (${visibleCount}${totalCount > visibleCount ? ' visible / ' + totalCount + ' total' : ''})</div>
+        ${discsHTML || '<div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">No discussions visible for your team.</div>'}
+        ${hiddenNote}
+        ${currentTeam ? `
+        <div class="discussion-add">
+          <input class="discussion-input" id="disc-author-${issue.id}" placeholder="Your name" style="max-width:160px"/>
+          <input class="discussion-input" id="disc-text-${issue.id}" placeholder="Post to ${TEAMS[currentTeam]?.label || 'your team'}…"
+                 onkeydown="if(event.key==='Enter')addDiscussion('${issue.id}')"/>
+          <button class="btn btn-sm btn-ghost" onclick="addDiscussion('${issue.id}')">Post</button>
+        </div>` : ''}
+      </div>
+    </div>
+  </div>`;
+    }
+
+    function toggleCard(id) {
+      if (expandedCards.has(id)) expandedCards.delete(id);
+      else expandedCards.add(id);
+      renderIssues();
+    }
+
+    // ── NEW ISSUE ──
+    function openNewIssueModal() {
+      if (!currentTeam) { openTeamSelector(); return; }
+      ['f-title', 'f-desc', 'f-reporter', 'f-assignee'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('f-category').value = 'Bug';
+      document.getElementById('f-priority').value = 'medium';
+      document.getElementById('f-date').value = today();
+      document.getElementById('uploadPreview').innerHTML = '';
+      pendingFiles.new = [];
+      document.getElementById('newModal').classList.add('open');
+    }
+
+    async function submitNewIssue() {
+      const title = document.getElementById('f-title').value.trim();
+      const reporter = document.getElementById('f-reporter').value.trim();
+      const date = document.getElementById('f-date').value;
+      if (!title) { toast('Issue title is required.', 'error'); return; }
+      if (!reporter) { toast('"Raised By" name is required.', 'error'); return; }
+
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true; btn.textContent = 'Submitting…';
+
+      try {
+        const id = await generateId();
+        let imageUrls = [];
+        if (pendingFiles.new.length) {
+          imageUrls = await uploadImages(pendingFiles.new, id, 'new');
+        }
+
+        const issue = {
+          id, title,
+          description: document.getElementById('f-desc').value.trim(),
+          reporter,
+          category: document.getElementById('f-category').value,
+          priority: document.getElementById('f-priority').value,
+          assignee: document.getElementById('f-assignee').value.trim() || null,
+          date_reported: date,
+          status: 'open',
+          action_taken: null,
+          date_action: null,
+          date_closed: null,
+          discussions: [],
+          images: imageUrls
+        };
+
+        const { error } = await sb.from('issues').insert([issue]);
+        if (error) throw error;
+
+        issues.unshift(issue);
+        pendingFiles.new = [];
+        closeModal('newModal');
+        renderIssues();
+        toast(`${id} reported successfully! 🎉`, 'success');
+      } catch (e) {
+        toast('Error: ' + e.message, 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = 'Submit Issue';
+      }
+    }
+
+    // ── UPDATE MODAL ──
+    function openUpdateModal(id) {
+      if (!currentTeam) { openTeamSelector(); return; }
+      const issue = issues.find(i => i.id === id);
+      if (!issue) return;
+      document.getElementById('u-id').value = id;
+      document.getElementById('updateModalTitle').textContent = `Update ${id}`;
+      document.getElementById('u-status').value = issue.status;
+      document.getElementById('u-action').value = issue.action_taken || '';
+      document.getElementById('u-assignee').value = issue.assignee || '';
+      document.getElementById('u-action-date').value = issue.date_action || '';
+      document.getElementById('u-closed-date').value = issue.date_closed || '';
+      document.getElementById('u-disc-author').value = '';
+      document.getElementById('u-disc-text').value = '';
+      document.getElementById('updateUploadPreview').innerHTML = '';
+      pendingFiles.update = [];
+
+      // Configure discussion section for team
+      const t = TEAMS[currentTeam];
+      const noticeEl = document.getElementById('updateDiscTeamNotice');
+      const pickerEl = document.getElementById('updateDiscTeamPicker');
+
+      if (currentTeam === 'superadmin') {
+        noticeEl.innerHTML = `👑 As Super Admin you can post to any team`;
+        pickerEl.style.display = 'block';
+      } else {
+        noticeEl.innerHTML = `${t.icon} This note will be posted privately for <strong style="color:${t.color}">${t.label}</strong>`;
+        pickerEl.style.display = 'none';
+      }
+
+      document.getElementById('updateModal').classList.add('open');
+    }
+
+    async function submitUpdate() {
+      const id = document.getElementById('u-id').value;
+      const issue = issues.find(i => i.id === id);
+      if (!issue) return;
+
+      const btn = document.getElementById('updateSubmitBtn');
+      btn.disabled = true; btn.textContent = 'Saving…';
+
+      try {
+        let newUrls = [];
+        if (pendingFiles.update.length) {
+          newUrls = await uploadImages(pendingFiles.update, id, 'update');
+        }
+
+        const discAuthor = document.getElementById('u-disc-author').value.trim();
+        const discText = document.getElementById('u-disc-text').value.trim();
+        const discussions = [...(issue.discussions || [])];
+
+        if (discText) {
+          // Determine target team for this note
+          let targetTeam = currentTeam;
+          if (currentTeam === 'superadmin') {
+            targetTeam = document.getElementById('u-disc-team').value;
+          }
+          discussions.push({
+            author: discAuthor || (TEAMS[currentTeam]?.label || 'Anonymous'),
+            text: discText,
+            date: today(),
+            team: targetTeam
+          });
+        }
+
+        const actionDate = document.getElementById('u-action-date').value;
+        const closedDate = document.getElementById('u-closed-date').value;
+
+        const updates = {
+          status: document.getElementById('u-status').value,
+          action_taken: document.getElementById('u-action').value.trim() || null,
+          assignee: document.getElementById('u-assignee').value.trim() || null,
+          date_action: actionDate || null,
+          date_closed: closedDate || null,
+          discussions,
+          images: [...(issue.images || []), ...newUrls]
+        };
+
+        const { error } = await sb.from('issues').update(updates).eq('id', id);
+        if (error) throw error;
+
+        Object.assign(issue, updates);
+        if (discText) expandedCards.add(id);
+        pendingFiles.update = [];
+        closeModal('updateModal');
+        renderIssues();
+        toast(`${id} updated! ✓`, 'success');
+      } catch (e) {
+        toast('Error: ' + e.message, 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = 'Save Updates';
+      }
+    }
+
+    // ── INLINE DISCUSSION ──
+    async function addDiscussion(id) {
+      if (!currentTeam) { toast('Please select your team first.', 'error'); return; }
+      const author = document.getElementById(`disc-author-${id}`).value.trim();
+      const text = document.getElementById(`disc-text-${id}`).value.trim();
+      if (!text) { toast('Please write a comment first.', 'error'); return; }
+
+      const issue = issues.find(i => i.id === id);
+      if (!issue) return;
+
+      const discussions = [...(issue.discussions || []), {
+        author: author || (TEAMS[currentTeam]?.label || 'Anonymous'),
+        text,
+        date: today(),
+        team: currentTeam
+      }];
+
+      const { error } = await sb.from('issues').update({ discussions }).eq('id', id);
+      if (error) { toast('Error: ' + error.message, 'error'); return; }
+
+      issue.discussions = discussions;
+      expandedCards.add(id);
+      renderIssues();
+      toast(`Note posted for ${TEAMS[currentTeam]?.label} 💬`, 'success');
+    }
+
+    // ── DELETE ──
+    async function deleteIssue(id) {
+      if (!confirm(`Delete ${id}? This cannot be undone.`)) return;
+      loading(true);
+      const { error } = await sb.from('issues').delete().eq('id', id);
+      loading(false);
+      if (error) { toast('Error: ' + error.message, 'error'); return; }
+      issues = issues.filter(i => i.id !== id);
+      expandedCards.delete(id);
+      renderIssues();
+      toast(`${id} deleted.`, 'success');
+    }
+
+    // ── LIGHTBOX ──
+    function openLightbox(url) {
+      document.getElementById('lightboxImg').src = url;
+      document.getElementById('lightbox').classList.add('open');
+    }
+    function closeLightbox(e) {
+      if (!e || e.target !== document.getElementById('lightboxImg'))
+        document.getElementById('lightbox').classList.remove('open');
+    }
+
+    // ── EXPORT ──
+    function exportToExcel() {
+      if (!issues.length) { toast('No issues to export.', 'error'); return; }
+      const rows = issues.map(i => ({
+        'Issue ID': i.id,
+        'Title': i.title,
+        'Description': i.description || '',
+        'Category': i.category || '',
+        'Priority': i.priority || '',
+        'Status': { open: 'Open', inprogress: 'In Progress', covered: 'Covered', closed: 'Closed' }[i.status] || i.status,
+        'Raised By': i.reporter || '',
+        'Assigned To': i.assignee || '',
+        'Date Reported': i.date_reported || '',
+        'Action Taken': i.action_taken || '',
+        'Date of Action': i.date_action || '',
+        'Closed Date': i.date_closed || '',
+        'Image Count': (i.images || []).length,
+        'Image URLs': (i.images || []).join(' | '),
+        'Discussion Count': (i.discussions || []).length,
+        'Discussions': (i.discussions || []).map(d => `[${d.date}][${d.team || ''}] ${d.author}: ${d.text}`).join(' || ')
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      ws['!cols'] = [
+        { wch: 10 }, { wch: 36 }, { wch: 50 }, { wch: 16 }, { wch: 10 }, { wch: 14 },
+        { wch: 20 }, { wch: 20 }, { wch: 16 }, { wch: 50 }, { wch: 16 }, { wch: 16 },
+        { wch: 12 }, { wch: 60 }, { wch: 14 }, { wch: 80 }
+      ];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Issues');
+      XLSX.writeFile(wb, `ONE_PAGE_Issues_${today()}.xlsx`);
+      toast('Excel exported! 📊', 'success');
+    }
+
+    // ── MODAL CLOSE ──
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+    document.querySelectorAll('.modal-overlay').forEach(o => {
+      o.addEventListener('click', e => {
+        if (e.target === o && o.id !== 'teamModal') o.classList.remove('open');
+      });
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        document.getElementById('lightbox').classList.remove('open');
+        document.querySelectorAll('.modal-overlay.open').forEach(o => {
+          if (o.id !== 'teamModal') o.classList.remove('open');
+        });
+      }
+    });
+
+    // ── INIT ──
+    document.getElementById('f-date').value = today();
+
+    // Show team selector on load, then load issues
+    window.addEventListener('load', () => {
+      loadIssues();
+      openTeamSelector();
+    });
+  </script>
+</body>
+
+</html>
